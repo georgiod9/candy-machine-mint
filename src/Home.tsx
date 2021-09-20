@@ -9,7 +9,18 @@ import * as anchor from "@project-serum/anchor";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletDialogButton } from "@solana/wallet-adapter-material-ui";
+import { WalletDialogButton } from "@solana/wallet-adapter-material-ui"; 
+
+import { makeStyles } from "@material-ui/core/styles";
+import { Typography } from '@material-ui/core';
+import { StyleSheet, Text, View } from "react-native";
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import { Grid } from '@material-ui/core';
+import { Breadcrumbs, Link } from "@material-ui/core";
+
+import logo from './../src/logo.png'
+import { Image } from "@material-ui/icons";
 
 import {
   CandyMachine,
@@ -18,6 +29,8 @@ import {
   mintOneToken,
   shortenAddress,
 } from "./candy-machine";
+import { CenterFocusStrong } from "@material-ui/icons";
+import { minHeight } from "@mui/system";
 
 const ConnectButton = styled(WalletDialogButton)``;
 
@@ -26,6 +39,9 @@ const CounterText = styled.span``; // add your styles here
 const MintContainer = styled.div``; // add your styles here
 
 const MintButton = styled(Button)``; // add your styles here
+
+var tempRemaining = 0;
+var tempAvailable = 0;
 
 export interface HomeProps {
   candyMachineId: anchor.web3.PublicKey;
@@ -52,6 +68,8 @@ const Home = (props: HomeProps) => {
 
   const wallet = useWallet();
   const [candyMachine, setCandyMachine] = useState<CandyMachine>();
+
+  const [alignment, setAlignment] = useState("");
 
   const onMint = async () => {
     try {
@@ -145,7 +163,7 @@ const Home = (props: HomeProps) => {
         signTransaction: wallet.signTransaction,
       } as anchor.Wallet;
 
-      const { candyMachine, goLiveDate, itemsRemaining } =
+      const { candyMachine, goLiveDate, itemsRemaining, itemsAvailable } =
         await getCandyMachineState(
           anchorWallet,
           props.candyMachineId,
@@ -155,60 +173,169 @@ const Home = (props: HomeProps) => {
       setIsSoldOut(itemsRemaining === 0);
       setStartDate(goLiveDate);
       setCandyMachine(candyMachine);
+      tempAvailable = itemsAvailable;
+      tempRemaining = itemsRemaining;
+      
     })();
   }, [wallet, props.candyMachineId, props.connection]);
 
+  const styles = StyleSheet.create({
+    container: {
+      paddingTop: 50,
+      flexDirection: 'row',
+      justifyContent: 'space-between'
+    },
+    header: {
+      
+      flexDirection: 'row',
+      justifyContent: 'space-between'
+    },
+    tinyLogo: {
+      width: 50,
+      height: 50,
+    },
+    logo: {
+      width: 66,
+      height: 58,
+    },
+  });
+
+  const useStyles = makeStyles((theme) => ({
+    root: {
+      flexGrow: 1
+    },
+  
+    paper: {
+      padding: theme.spacing(2),
+      textAlign: 'center',
+      color: theme.palette.text.secondary
+    },
+    custom: {
+      padding: theme.spacing(2),
+      textAlign: 'center',
+      color: theme.palette.text.secondary,
+      
+    }
+  
+  }));
+
+  
+const classes = useStyles();
+
   return (
     <main>
-      {wallet.connected && (
-        <p>Address: {shortenAddress(wallet.publicKey?.toBase58() || "")}</p>
-      )}
+      <div className={classes.root}>
+        <Grid item xs={12}>
+          <Paper className={classes.custom}>
 
-      {wallet.connected && (
-        <p>Balance: {(balance || 0).toLocaleString()} SOL</p>
-      )}
+            <View style={styles.header}>
+              <img style={{ height: 50, width: 50 }} src={logo} />
 
-      <MintContainer>
-        {!wallet.connected ? (
-          <ConnectButton>Connect Wallet</ConnectButton>
-        ) : (
-          <MintButton
-            disabled={isSoldOut || isMinting || !isActive}
-            onClick={onMint}
-            variant="contained"
+              <Breadcrumbs aria-label="breadcrumb">
+                <Link underline="hover" color="inherit" href="/">
+                  Home
+                </Link>
+                <Link
+                  underline="hover"
+                  color="inherit"
+                  href="/gallery"
+                >
+                  Gallery
+                </Link>
+                <Typography color="primary">About</Typography>
+              </Breadcrumbs>
+
+            </View>
+          </Paper>
+        </Grid>
+      </div>
+
+      <div style={{
+        backgroundImage: `url(${process.env.PUBLIC_URL + "/assets/bg.jpg"})`,
+        backgroundSize: "cover",
+        height: '100%',
+        width: '100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: "center"
+      }}>
+
+        <div className={classes.root}>
+          <Grid container
+            direction="column"
+            justify="center"
+            alignItems="center"
+            style={{ minHeight: "100vh" }}
+            spacing={3}
           >
-            {isSoldOut ? (
-              "SOLD OUT"
-            ) : isActive ? (
-              isMinting ? (
-                <CircularProgress />
-              ) : (
-                "MINT"
-              )
-            ) : (
-              <Countdown
-                date={startDate}
-                onMount={({ completed }) => completed && setIsActive(true)}
-                onComplete={() => setIsActive(true)}
-                renderer={renderCounter}
-              />
-            )}
-          </MintButton>
-        )}
-      </MintContainer>
+            <Grid item xs={6}>
+              <Paper className={classes.paper}>
+                {wallet.connected && (
+                  <Typography>
+                    <h3>Address: {shortenAddress(wallet.publicKey?.toBase58() || "")}</h3>
+                  </Typography>
+                )}
 
-      <Snackbar
-        open={alertState.open}
-        autoHideDuration={6000}
-        onClose={() => setAlertState({ ...alertState, open: false })}
-      >
-        <Alert
+                {wallet.connected && (
+                  <Typography>
+                    <h3>Balance: {(balance || 0).toLocaleString()} SOL</h3>
+                  </Typography>
+                )}
+
+                {wallet.connected && (
+                  <Typography>
+                    <h3>Remaining: {(tempRemaining || 0).toLocaleString()} / {(tempAvailable || 0).toLocaleString()}</h3>
+                  </Typography>
+                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={6}>
+              <MintContainer>
+                {!wallet.connected ? (
+                  <ConnectButton>Connect Wallet</ConnectButton>
+                ) : (
+                  <MintButton
+                    disabled={isSoldOut || isMinting || !isActive}
+                    onClick={onMint}
+                    variant="contained"
+                  >
+                    {isSoldOut ? (
+                      "SOLD OUT"
+                    ) : isActive ? (
+                      isMinting ? (
+                        <CircularProgress />
+                      ) : (
+                        "MINT FOR 1 SOL"
+                      )
+                    ) : (
+                      <Countdown
+                        date={startDate}
+                        onMount={({ completed }) => completed && setIsActive(true)}
+                        onComplete={() => setIsActive(true)}
+                        renderer={renderCounter}
+                      />
+                    )}
+                  </MintButton>
+                )}
+              </MintContainer>
+            </Grid>
+          </Grid>
+        </div>
+
+        <Snackbar
+          open={alertState.open}
+          autoHideDuration={6000}
           onClose={() => setAlertState({ ...alertState, open: false })}
-          severity={alertState.severity}
         >
-          {alertState.message}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => setAlertState({ ...alertState, open: false })}
+            severity={alertState.severity}
+          >
+            {alertState.message}
+          </Alert>
+        </Snackbar>
+
+      </div>
     </main>
   );
 };
